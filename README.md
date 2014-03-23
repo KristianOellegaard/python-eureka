@@ -4,7 +4,7 @@ python-eureka
 The goal of this project is to provide an easy-to-use client interface to Eureka,
 a middle-tier load balancer open sourced and used by Netflix.
 
-It's fairly straight forward to use once you hve setup Eureka itself. Consider the following script:
+It's fairly straight forward to use once you hve setup Eureka itself. Consider the following script (to be run on EC2):
 
 ```python
 
