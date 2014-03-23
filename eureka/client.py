@@ -126,21 +126,23 @@ class EurekaClient(object):
                 'ami-id': ec2metadata.get('ami-id'),
                 'instance-type': ec2metadata.get('instance-type'),
             }
+        instance_data = {
+            'instance': {
+                'hostName': self.host_name,
+                'app': self.app_name,
+                'vipAddr': self.vip_address or '',
+                'secureVipAddr': self.secure_vip_address or '',
+                'status': initial_status,
+                'port': self.port,
+                'securePort': self.secure_port,
+                'dataCenterInfo': data_center_info
+            }
+        }
         success = False
         for eureka_url in self.eureka_urls:
             try:
-                r = requests.post(urljoin(eureka_url, "apps/%s" % self.app_name), json.dumps({
-                    'instance': {
-                        'hostName': self.host_name,
-                        'app': self.app_name,
-                        'vipAddr': self.vip_address,
-                        'secureVipAddr': self.secure_vip_address,
-                        'status': initial_status,
-                        'port': self.port,
-                        'securePort': self.secure_port,
-                        'dataCenterInfo': data_center_info
-                    }
-                }), headers={'Content-Type': 'application/json'})
+                r = requests.post(urljoin(eureka_url, "apps/%s" % self.app_name), json.dumps(instance_data),
+                                  headers={'Content-Type': 'application/json'})
                 r.raise_for_status()
                 success = True
                 break
