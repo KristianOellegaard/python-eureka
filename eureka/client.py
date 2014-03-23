@@ -35,8 +35,11 @@ class EurekaClient(object):
         super(EurekaClient, self).__init__()
         self.app_name = app_name
         self.eureka_url = eureka_url
-        self.host_name = host_name
         self.data_center = data_center
+        if not host_name and data_center == "Amazon":
+            self.host_name = ec2metadata.get("public-hostname")
+        else:
+            self.host_name = host_name
         # Virtual host name by which the clients identifies this service
         self.vip_address = vip_address
         self.secure_vip_address = secure_vip_address
