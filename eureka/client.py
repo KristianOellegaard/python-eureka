@@ -169,10 +169,13 @@ class EurekaClient(object):
             raise EurekaUpdateFailedException("Did not receive correct reply from any instances")
 
     def heartbeat(self):
+        instance_id = self.host_name
+        if self.data_center == "Amazon":
+            instance_id = ec2metadata.get('instance-id')
         success = False
         for eureka_url in self.eureka_urls:
             try:
-                r = requests.put(urljoin(eureka_url, "apps/%s/%s" % (self.app_name, self.host_name)))
+                r = requests.put(urljoin(eureka_url, "apps/%s/%s" % (self.app_name, instance_id)))
                 r.raise_for_status()
                 success = True
                 break
