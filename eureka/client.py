@@ -27,6 +27,9 @@ class EurekaUpdateFailedException(EurekaClientException):
 class EurekaHeartbeatFailedException(EurekaClientException):
     pass
 
+class EurekaGetFailedException(EurekaClientException):
+    pass
+
 
 class EurekaClient(object):
     def __init__(self, app_name, eureka_url=None, eureka_domain_name=None, host_name=None, data_center="Amazon",
@@ -53,9 +56,10 @@ class EurekaClient(object):
         self.prefer_same_zone = prefer_same_zone
         # Domain name, if using DNS
         self.eureka_domain_name = eureka_domain_name
+        #if eureka runs on a port that is not 80, this will go into the urls to eureka
+        self.eureka_port = eureka_port
         # Relative URL to eureka
         self.context = context
-        self.eureka_port = eureka_port
         self.eureka_urls = self.get_eureka_urls()
 
     def _get_txt_records_from_dns(self, domain):
@@ -188,19 +192,32 @@ class EurekaClient(object):
         if not success:
             raise EurekaHeartbeatFailedException("Did not receive correct reply from any instances")
 
-
-
-
-
-    def get_app_instances(self, app_id):
+    #a generic get request, since most of the get requests for discovery will take a similar form
+    def _do_a_get(self, endpoint):
         for eureka_url in self.eureka_urls:
             try:
-                r = requests.get(urljoin(eureka_url, "apps/%s" % (
-                    app_id
-                )), headers={ 'accept':'application/json'})
+                r = requests.get(urljoin(eureka_url, endpoint), headers={ 'accept':'application/json'})
                 r.raise_for_status()
                 return json.loads(r.content)
             except (EurekaHTTPException, URLError) as e:
                 pass
-        if not success:
-            raise EurekaUpdateFailedException("Did not receive correct reply from any instances")
+        raise EurekaGetFailedException("Failed to GET %s from all instances" % endpoint)
+
+    def get_apps(self):
+        return self._do_a_get("apps")
+
+    def get_app(self, app_id):
+        return self._do_a_get("apps/%s" % app_id)
+
+    def get_vip(self, vip_address):
+        return self._do_a_get("vips/%s" % vip_address)
+
+    def get_svip(self, vip_address):
+        return self._do_a_get("svips/%s" % vip_address)
+
+    def get_instance(self, instance_id):
+        return self._do_a_get("instances/%s" % instance_id)
+
+    def get_app_instance(self, app_id, instance_id):
+        return self._do_a_get("apps/%s/%s" % (app_id, instance_id))
+
