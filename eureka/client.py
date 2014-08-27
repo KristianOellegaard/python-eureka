@@ -27,11 +27,14 @@ class EurekaUpdateFailedException(EurekaClientException):
 class EurekaHeartbeatFailedException(EurekaClientException):
     pass
 
+class EurekaGetFailedException(EurekaClientException):
+    pass
+
 
 class EurekaClient(object):
     def __init__(self, app_name, eureka_url=None, eureka_domain_name=None, host_name=None, data_center="Amazon",
                  vip_address=None, secure_vip_address=None, port=None, secure_port=None, use_dns=True, region=None,
-                 prefer_same_zone=True, context="eureka/v2"):
+                 prefer_same_zone=True, context="eureka/v2", eureka_port=None):
         super(EurekaClient, self).__init__()
         self.app_name = app_name
         self.eureka_url = eureka_url
@@ -53,6 +56,8 @@ class EurekaClient(object):
         self.prefer_same_zone = prefer_same_zone
         # Domain name, if using DNS
         self.eureka_domain_name = eureka_domain_name
+        #if eureka runs on a port that is not 80, this will go into the urls to eureka
+        self.eureka_port = eureka_port
         # Relative URL to eureka
         self.context = context
         self.eureka_urls = self.get_eureka_urls()
@@ -93,7 +98,10 @@ class EurekaClient(object):
                 eureka_instances = zone_dns_map[zone]
                 random.shuffle(eureka_instances)  # Shuffle order for load balancing
                 for eureka_instance in eureka_instances:
-                    eureka_instance_url = urljoin("http://%s" % eureka_instance, self.context, "/")
+                    server_uri = "http://%s" % eureka_instance
+                    if self.eureka_port is None:
+                        server_uri += ":%s" % self.eureka_port
+                    eureka_instance_url = urljoin(server_uri, self.context, "/")
                     if not eureka_instance_url.endswith("/"):
                         eureka_instance_url = "%s/" % eureka_instance_url
                     service_urls.append(eureka_instance_url)
@@ -183,3 +191,33 @@ class EurekaClient(object):
                 pass
         if not success:
             raise EurekaHeartbeatFailedException("Did not receive correct reply from any instances")
+
+    #a generic get request, since most of the get requests for discovery will take a similar form
+    def _get_from_any_instance(self, endpoint):
+        for eureka_url in self.eureka_urls:
+            try:
+                r = requests.get(urljoin(eureka_url, endpoint), headers={'accept': 'application/json'})
+                r.raise_for_status()
+                return json.loads(r.content)
+            except (EurekaHTTPException, URLError) as e:
+                pass
+        raise EurekaGetFailedException("Failed to GET %s from all instances" % endpoint)
+
+    def get_apps(self):
+        return self._get_from_any_instance("apps")
+
+    def get_app(self, app_id):
+        return self._get_from_any_instance("apps/%s" % app_id)
+
+    def get_vip(self, vip_address):
+        return self._get_from_any_instance("vips/%s" % vip_address)
+
+    def get_svip(self, vip_address):
+        return self._get_from_any_instance("svips/%s" % vip_address)
+
+    def get_instance(self, instance_id):
+        return self._get_from_any_instance("instances/%s" % instance_id)
+
+    def get_app_instance(self, app_id, instance_id):
+        return self._get_from_any_instance("apps/%s/%s" % (app_id, instance_id))
+
