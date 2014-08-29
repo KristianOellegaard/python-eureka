@@ -99,7 +99,7 @@ class EurekaClient(object):
                 random.shuffle(eureka_instances)  # Shuffle order for load balancing
                 for eureka_instance in eureka_instances:
                     server_uri = "http://%s" % eureka_instance
-                    if self.eureka_port is None:
+                    if self.eureka_port:
                         server_uri += ":%s" % self.eureka_port
                     eureka_instance_url = urljoin(server_uri, self.context, "/")
                     if not eureka_instance_url.endswith("/"):
