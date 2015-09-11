@@ -3,7 +3,7 @@ import random
 from urllib2 import URLError
 from urlparse import urljoin
 from eureka import requests
-import ec2metadata
+from eureka import ec2metadata
 import logging
 import dns.resolver
 from eureka.requests import EurekaHTTPException
@@ -147,6 +147,7 @@ class EurekaClient(object):
             }
         }
         success = False
+        last_e = None
         for eureka_url in self.eureka_urls:
             try:
                 r = requests.post(urljoin(eureka_url, "apps/%s" % self.app_name), json.dumps(instance_data),
@@ -155,12 +156,13 @@ class EurekaClient(object):
                 success = True
                 break
             except (EurekaHTTPException, URLError) as e:
-                pass
+                last_e = e
         if not success:
-            raise EurekaRegistrationFailedException("Did not receive correct reply from any instances")
+            raise EurekaRegistrationFailedException("Did not receive correct reply from any instances, last error: " + str(e))
 
     def update_status(self, new_status):
         success = False
+        last_e = None
         for eureka_url in self.eureka_urls:
             try:
                 r = requests.put(urljoin(eureka_url, "apps/%s/%s/status?value=%s" % (
@@ -172,9 +174,9 @@ class EurekaClient(object):
                 success = True
                 break
             except (EurekaHTTPException, URLError) as e:
-                pass
+                last_e = e
         if not success:
-            raise EurekaUpdateFailedException("Did not receive correct reply from any instances")
+            raise EurekaUpdateFailedException("Did not receive correct reply from any instances, last error: " + str(e))
 
     def heartbeat(self):
         instance_id = self.host_name
@@ -220,4 +222,3 @@ class EurekaClient(object):
 
     def get_app_instance(self, app_id, instance_id):
         return self._get_from_any_instance("apps/%s/%s" % (app_id, instance_id))
-
