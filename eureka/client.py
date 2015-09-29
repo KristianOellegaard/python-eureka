@@ -160,12 +160,15 @@ class EurekaClient(object):
             raise EurekaRegistrationFailedException("Did not receive correct reply from any instances")
 
     def update_status(self, new_status):
+        instance_id = self.host_name
+        if self.data_center == "Amazon":
+            instance_id = ec2metadata.get('instance-id')
         success = False
         for eureka_url in self.eureka_urls:
             try:
                 r = requests.put(urljoin(eureka_url, "apps/%s/%s/status?value=%s" % (
                     self.app_name,
-                    self.host_name,
+                    instance_id,
                     new_status
                 )))
                 r.raise_for_status()
