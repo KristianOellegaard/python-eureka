@@ -1,5 +1,7 @@
 import urllib2
 from eureka import __version__ as client_version
+import gzip
+import StringIO
 
 
 class EurekaHTTPException(Exception):
@@ -32,7 +34,15 @@ class Request(urllib2.Request):
             response = request._opener.open(request)
         except urllib2.HTTPError as e:
             return Response(e.code, e.read(), url, method)
-        return Response(response.getcode(), response.read(), url, method)
+
+        content = response.read()
+        info = response.info()
+        if "gzip" in info.get("Content-Encoding", "").lower():
+            data = StringIO.StringIO(content)
+            gzipper = gzip.GzipFile(fileobj=data)
+            content = gzipper.read()
+
+        return Response(response.getcode(), content, url, method)
 
 
 class Response(object):
