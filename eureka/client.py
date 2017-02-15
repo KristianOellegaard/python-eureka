@@ -204,7 +204,10 @@ class EurekaClient(object):
     def _get_from_any_instance(self, endpoint):
         for eureka_url in self.eureka_urls:
             try:
-                r = requests.get(urljoin(eureka_url, endpoint), headers={'accept': 'application/json'})
+                r = requests.get(urljoin(eureka_url, endpoint), headers={
+                    'accept': 'application/json',
+                    'accept-encoding': 'gzip',
+                })
                 r.raise_for_status()
                 return json.loads(r.content)
             except (EurekaHTTPException, URLError) as e:
